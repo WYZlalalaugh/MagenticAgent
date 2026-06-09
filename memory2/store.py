@@ -693,6 +693,39 @@ CREATE VIRTUAL TABLE IF NOT EXISTS vec_items USING vec0(
         )
         self._db.commit()
 
+    def decay_unaccessed_items(
+        self,
+        min_days_since_update: int = 30,
+        reinforcement_threshold: int = 3,
+    ) -> int:
+        """对长时间未被检索且 reinforcement 较低的记忆条目做降权处理。
+
+        reinforcement=1 的条目超过 min_days_since_update 天未更新 → 标记为 archived
+        reinforcement 在 2 到 threshold-1 之间 → reinforcement 减半
+        返回受影响的条目数。
+        """
+        now = _now_iso()
+        cutoff = (
+            datetime.now(timezone.utc) - timedelta(days=max(1, int(min_days_since_update)))
+        ).isoformat()
+
+        # 归档：reinforcement=1 且超期的条目
+        archived = self._db.execute(
+            "UPDATE memory_items SET status='archived', updated_at=? "
+            "WHERE status='active' AND reinforcement=1 AND updated_at < ?",
+            (now, cutoff),
+        ).rowcount
+
+        # 降权：reinforcement 较低且超期的条目
+        decayed = self._db.execute(
+            "UPDATE memory_items SET reinforcement=MAX(1, reinforcement/2), updated_at=? "
+            "WHERE status='active' AND reinforcement >= 2 AND reinforcement < ? AND updated_at < ?",
+            (now, int(reinforcement_threshold), cutoff),
+        ).rowcount
+
+        self._db.commit()
+        return archived + decayed
+
     # ------------------------------------------------------------------
     # 读操作
     # ------------------------------------------------------------------

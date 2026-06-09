@@ -157,6 +157,76 @@ PRESETS: dict[str, PresetConfig] = {
             "context_only_judge_threshold_with_evidence": 0.75,
         },
     },
+    "study_mode": {
+        # 学习/工作模式：降低打扰频率，提高发送门槛
+        "trigger": {
+            "tick_interval_s0": 1200,  # 20分钟
+            "tick_interval_s1": 600,   # 10分钟
+            "tick_interval_s2": 300,   # 5分钟
+            "tick_interval_s3": 120,   # 2分钟
+            "tick_jitter": 0.3,
+        },
+        "gate": {
+            "score_llm_threshold": 0.30,
+            "judge_send_threshold": 0.78,
+            "judge_balance_daily_max": 12,
+        },
+        "anyaction": {
+            "anyaction_enabled": True,
+            "anyaction_daily_max_actions": 8,
+            "anyaction_min_interval_seconds": 600,
+            "anyaction_probability_min": 0.05,
+            "anyaction_probability_max": 0.25,
+            "anyaction_idle_scale_minutes": 90.0,
+            "anyaction_reset_hour_local": 12,
+            "anyaction_timezone": "Asia/Shanghai",
+        },
+        "safety": {
+            "delivery_dedupe_hours": 24,
+            "message_dedupe_recent_n": 8,
+        },
+        "context": {
+            "context_only_daily_max": 1,
+            "context_only_min_interval_hours": 24,
+            "context_only_judge_threshold": 0.82,
+            "context_only_judge_threshold_with_evidence": 0.78,
+        },
+    },
+    "weekend": {
+        # 周末模式：高频检查，只推轻松内容
+        "trigger": {
+            "tick_interval_s0": 300,   # 5分钟
+            "tick_interval_s1": 180,   # 3分钟
+            "tick_interval_s2": 90,    # 1.5分钟
+            "tick_interval_s3": 45,    # 45秒
+            "tick_jitter": 0.25,
+        },
+        "gate": {
+            "score_llm_threshold": 0.12,
+            "judge_send_threshold": 0.50,
+            "judge_balance_daily_max": 36,
+        },
+        "anyaction": {
+            "anyaction_enabled": True,
+            "anyaction_daily_max_actions": 36,
+            "anyaction_min_interval_seconds": 120,
+            "anyaction_probability_min": 0.15,
+            "anyaction_probability_max": 0.70,
+            "anyaction_idle_scale_minutes": 20.0,
+            "anyaction_reset_hour_local": 12,
+            "anyaction_timezone": "Asia/Shanghai",
+        },
+        "safety": {
+            "delivery_dedupe_hours": 6,
+            "message_dedupe_recent_n": 5,
+        },
+        "context": {
+            "context_only_daily_max": 3,
+            "context_only_min_interval_hours": 4,
+            "context_only_judge_threshold": 0.55,
+            "context_only_judge_threshold_with_evidence": 0.50,
+        },
+    },
 }
 
 

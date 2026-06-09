@@ -194,6 +194,25 @@ class IPCServerChannel:
             writer.write(payload.encode("utf-8"))
             await writer.drain()
 
+    async def send(self, chat_id: str, message: str) -> None:
+        """供 MessagePushTool 注册使用，向已连接的 CLI 客户端发送主动推送消息。"""
+        writer = self._writers.get(chat_id)
+        if not writer or writer.is_closing():
+            return
+        payload = (
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "content": message,
+                    "metadata": {"proactive": True},
+                },
+                ensure_ascii=False,
+            )
+            + "\n"
+        )
+        writer.write(payload.encode("utf-8"))
+        await writer.drain()
+
 
 def _session_override_metadata(
     data: dict,

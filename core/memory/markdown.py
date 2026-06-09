@@ -80,6 +80,7 @@ _ALLOWED_PENDING_TAGS = frozenset(
         "health_long_term",
         "requested_memory",
         "correction",
+        "agent_context",
     }
 )
 
@@ -823,8 +824,14 @@ history_entries.emotional_weight 规则：
 
 ---
 
-## 当前用户档案（用于查重）
+## 当前用户档案（用于查重 与 冲突检测）
 {current_memory or "（空）"}
+
+**冲突检测规则**：对比待处理对话中的新事实与当前用户档案：
+- 若新事实与档案中的已有条目**直接矛盾**（如档案说"用户喜欢策略游戏"，但用户在本轮说"我现在不喜欢策略游戏了"）→ 必须输出一条 `correction` 标签的 pending_item，content 格式为"更正：{旧事实}。{新事实}"
+- 若新事实只是**补充或细化**已有条目（如档案说"用户喜欢游戏"，本轮说"用户喜欢策略游戏"）→ 不需要 correction
+- 若新旧事实**不矛盾但新事实优先级更高**（如用户明确说"以后按这个来"）→ 正常提取为对应标签，不需要 correction
+- 不确定是否为矛盾的 → 保守处理，不输出 correction
 
 ## 最近三次 consolidation event（仅用于主题延续参考）
 使用原则（严格遵守）：

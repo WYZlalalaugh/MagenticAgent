@@ -672,6 +672,20 @@ class ProactiveStateStore:
             );
             CREATE INDEX IF NOT EXISTS idx_tick_step_log_tick_step
             ON tick_step_log(tick_id, step_index);
+
+            CREATE TABLE IF NOT EXISTS feedback_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_key TEXT NOT NULL,
+                tick_id TEXT,
+                source_type TEXT,
+                source_name TEXT,
+                topic TEXT,
+                feedback TEXT NOT NULL,
+                detail TEXT,
+                ts TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_feedback_log_session_ts
+            ON feedback_log(session_key, ts);
             """)
         self._db.commit()
 
@@ -723,3 +737,48 @@ class ProactiveStateStore:
         with self._lock:
             row = self._db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
         return int(row[0]) if row is not None else 0
+
+    def record_feedback(
+        self,
+        session_key: str,
+        feedback: str,
+        *,
+        tick_id: str = "",
+        source_type: str = "",
+        source_name: str = "",
+        topic: str = "",
+        detail: str = "",
+    ) -> None:
+        """记录用户对推送的反馈。feedback 为 'positive' | 'negative' | 'strong_negative'"""
+        with self._lock:
+            self._db.execute(
+                """INSERT INTO feedback_log(session_key, tick_id, source_type, source_name, topic, feedback, detail, ts)
+                   VALUES(?, ?, ?, ?, ?, ?, ?, ?)""",
+                (session_key, tick_id, source_type, source_name, topic, feedback, detail, _utcnow().isoformat()),
+            )
+            self._db.commit()
+
+    def get_recent_feedback(
+        self,
+        session_key: str,
+        limit: int = 20,
+    ) -> list[dict[str, object]]:
+        """获取最近 N 条反馈，供 proactive judge 注入决策 prompt。"""
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT source_type, source_name, topic, feedback, detail, ts "
+                "FROM feedback_log WHERE session_key=? "
+                "ORDER BY ts DESC LIMIT ?",
+                (session_key, int(limit)),
+            ).fetchall()
+        return [
+            {
+                "source_type": row["source_type"],
+                "source_name": row["source_name"],
+                "topic": row["topic"],
+                "feedback": row["feedback"],
+                "detail": row["detail"],
+                "ts": row["ts"],
+            }
+            for row in rows
+        ]
